@@ -15,6 +15,7 @@
 
     }
 
+var depth = -500;
 
     var i=0;
     var zt=0;
@@ -52,8 +53,8 @@
                     }
         addSphere(){
                 if(abs( mouseX-pmouseX)>3 && abs(mouseY-pmouseY)>3){
-                    var coord={x: mouseX, y: mouseY};
-                    let vector = {x: ( mouseX-pmouseX)/100, y: ( mouseY-pmouseY)/100};
+                    var coord={x: mouseX, y: mouseY, z: random(depth,0)};
+                    let vector = {x: ( mouseX-pmouseX)/100, y: ( mouseY-pmouseY)/100, z: random(-20,25)};
                     let colArr = new Array(3);
                     for(let i=0;i<3;i++) colArr[i] = Math.floor(Math.random()*255);
                     let col={};
@@ -70,21 +71,18 @@
         showspheres(){
             //console.log(this.spheres);
             var arrl = this.spheres;
-            for(let ele=0; ele< arrl.length;ele++){
+            for(let ele in arrl){
                 //console.log(arrl[ele]);
 
                 push();
-                translate(-width/2+arrl[ele].coord.x,-height/2+arrl[ele].coord.y,0);
+                translate(-width/2+arrl[ele].coord.x,-height/2+arrl[ele].coord.y,arrl[ele].coord.z);
                 //arrl[ele].coord.y++;
-                arrl[ele].coord.x+=arrl[ele].vector.x; arrl[ele].coord.y+=arrl[ele].vector.y;
+                arrl[ele].coord.x+=arrl[ele].vector.x; arrl[ele].coord.y+=arrl[ele].vector.y; arrl[ele].coord.z+=arrl[ele].vector.z;
                 pointLight(50,50,50,130,-300,200);
 
                 //ambientLight(arrl[ele].col.c /*'red'*/);
                 specularMaterial(arrl[ele].col.c);
-                var size;
-                if(ele>90) size=20;
-                else if(ele >=50 && ele<=90) size=10;
-                else size=5;
+                var size = lerp(0,20,ele/100)+1; //size varies from 1 to 21 (bigger when close to mouse)
 
                 sphere(size);
                 pop();
@@ -96,10 +94,9 @@
         RevertInBounds(){
             for(let ele=0; ele< this.spheres.length;ele++){
                 let sph = this.spheres[ele];
-                if(sph.coord.x >= 800 || sph.coord.x<=0 ) sph.vector.x = -sph.vector.x;
-                if(sph.coord.y <=0 || sph.coord.y>= 600){
-                    sph.vector.y = -sph.vector.y;
-                }
+                if(sph.coord.x >= width || sph.coord.x<=0 ) sph.vector.x = -sph.vector.x;
+                if(sph.coord.y <=0 || sph.coord.y>= height)  sph.vector.y = -sph.vector.y;
+                if(sph.coord.z <=depth || sph.coord.y>= 0)  sph.vector.z = -sph.vector.z;
             }
         }
         Gravity(){
@@ -110,6 +107,7 @@
         MouseTravel(){
             if(mouseIsPressed && (key=='t' || this.activemode=='travel'))
                 if(mouseButton==LEFT){ this.addSphere();
+                    console.log(key)
                     for(let ele=0; ele< this.spheres.length;ele++){
 
                         let sph = this.spheres[ele];
@@ -136,10 +134,9 @@
                 let svec = this.spheres[ele].vector;
                 // if(svec.x>0) svec.x-=0.001; else svec.x+=0.001;
                 //if(svec.y>0) svec.y-=0.001; else svec.y+=0.001;
-                if(abs(svec.x) > 2)
-                    svec.x*=0.99;
-                if(abs(svec.y) > 2)
-                    svec.y*=0.99;
+                if(abs(svec.x) > 2) svec.x*=0.99;
+                if(abs(svec.y) > 2) svec.y*=0.99;
+                if(abs(svec.z) > 2) svec.z*=0.99;
             }
         }
         MouseSuck(){
@@ -154,6 +151,23 @@
 
                         sph.vector.x*=0.99; sph.vector.y*=0.99;
                     }
+        }
+        obstacle(){
+            for(var i=0;i<this.spheres.length;i++){
+                var sp1 = this.spheres[i];
+               for(var j=0;j<this.spheres.length;j++){
+                  if(i==j) continue;
+                    var sp2=this.spheres[j];
+                   //console.log(sp2,i,j)
+                    if(dist(sp1.coord.x,sp1.coord.y,sp2.coord.x,sp2.coord.y)<=(lerp(0,20,i/100)+lerp(0,20,j/100)+2)){
+                        //print(sp1.coord.x,sp1.coord.y,sp2.coord.x,sp2.coord.y)
+                        //console.log(sp1.vector.x)
+                        sp1.vector.x = -sp1.vector.x; sp1.vector.y = -sp1.vector.y;
+                        sp2.vector.x = -sp2.vector.x; sp1.vector.x = -sp1.vector.x;
+                        //console.log(sp1.vector.x)
+                    }
+                }
+            }
         }
     }
 
@@ -230,9 +244,14 @@
         translate(-200,-200,-13); rotateZ(40); rotateY(20);
         ambientMaterial(20,200,20);
         cone(30,70);
-
         pop();
-        SphereObj.runSpheres()
+        SphereObj.runSpheres();
+
+        push();
+        translate(-width+width/2,+height/2,depth);
+        ambientMaterial(20,100,120,50);
+        rect(0,0,width,height);
+        pop();
     }
     function mousePressed() {
 
@@ -260,7 +279,9 @@
     <label for="MouseTravel">Mouse Travel</label> <input type="checkbox" name="features" id="MouseTravel" checked>
     <label for="MouseWind">Mouse Wind</label> <input type="checkbox" name="features" id="MouseWind" checked>
     <label for="AirFriction">Air Friction</label> <input type="checkbox" name="features" id="AirFriction" checked>
-    <label for="Gravity">Gravity</label> <input type="checkbox" name="features" id="Gravity" checked>
+    <label for="Gravity">Gravity</label> <input type="checkbox" name="features" id="Gravity" >
+    <label for="obstacle">obstacle</label> <input type="checkbox" name="features" id="obstacle">
+
 </div>
 
 <div id="other">
